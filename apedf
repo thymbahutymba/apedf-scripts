@@ -1,0 +1,15 @@
+#!/usr/bin/bash
+
+mkdir /dev/cpuset
+mount -t cgroup -o cpuset cpuset /dev/cpuset
+
+cd /dev/cpuset
+mkdir apedf
+
+echo 0-1 > apedf/cpuset.cpus
+echo 0 > apedf/cpuset.mems
+echo 1 > cpuset.cpu_exclusive
+echo 0 > cpuset.sched_load_balance
+echo 1 > apedf/cpuset.cpu_exclusive
+echo 0 > apedf/cpuset.mem_exclusive
+

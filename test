@@ -1,0 +1,76 @@
+#!/usr/bin/bash
+
+function usage {
+	echo "Usage: ./test -c cpus -H hyperperiod"
+	echo "  -h              display usage"
+	echo "  -c cpus         specify either make 2 or 4 cpus test"
+	echo "  -H hyperperiod  specify the hyperperiod from which the tasksets has"
+	echo "                  to be taken."
+	echo "                  This means the directory inside taskgen-rs/json/X_test/"
+}
+
+if [ "$1" = "-h" ]; then
+	usage
+	exit 0
+fi
+
+if [ $# -ne 4 ]; then
+	usage
+	exit 1
+fi
+
+while [[ "$#" -gt 0 ]]; do
+	case $1 in
+		-c) cpus="$2"; shift ;;
+		-H) H="$2"; shift ;;
+		*) echo "Unknown parameter passed: $1"; exit 1 ;;
+	esac
+	shift
+done
+
+if [ ${cpus} = 2 ]; then
+	U=$(seq 1.4 0.1 1.9 | sed 's/,/./')
+	echo 0-1 > /dev/cpuset/apedf/cpuset.cpus
+elif [ ${cpus} = 4 ]; then
+	U=$(seq 2.4 0.1 3.8 | sed 's/,/./')
+	echo 0-3 > /dev/cpuset/apedf/cpuset.cpus
+else 
+	echo "Invalid usage, cpus must be either 2 or 4."
+	exit 1
+fi
+
+if [ ! -d "taskgen-rs/json/fourth_test/${H}H/" ]; then
+	echo "There is no directory for H=${H}"
+	exit 1
+fi
+
+for policy in $(seq 0 2); do
+	echo $policy > /proc/sys/kernel/sched_dl_policy
+
+	case $policy in 
+		1) policy_str='apedf-ff';
+			;; 
+		2) policy_str='apedf-wf';
+			;; 
+		*) policy_str='gEDF';
+			;; 
+	esac
+
+	echo $policy_str
+	for i in $U; do 
+		mkdir -p rt-app-log/fourth_test/${H}H/${cpus}cpus/${policy_str}/${i}u
+
+		for f in taskgen-rs/json/fourth_test/${H}H/${cpus}cpus/Config*_${i}u.json; do
+			if ps aux | grep -v grep | grep rt-app; then
+				echo "rt-app error!!!!!!!"
+				exit 1
+			fi
+
+			mkdir rt-app-log/${i}u
+			./rt-app/src/rt-app ${f}
+			mv rt-app-log/${i}u rt-app-log/fourth_test/${H}H/${cpus}cpus/${policy_str}/${i}u/`echo ${f##*/} | sed 's/_.*//'`
+		done
+
+		sleep 1
+	done
+done
