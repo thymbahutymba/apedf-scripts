@@ -53,7 +53,7 @@ def plot(data, title, stdev=False):
     plt.show()
 
 
-def multiple_plot(data_array, title, stdev=False):
+def multiple_plot(data_array, title, fname, stdev=False):
     markers = ['o', '^', 's', 'd', 'X', 'h']
     fig, axs = plt.subplots(len(data_array), squeeze=False)
     axs = axs.flatten()
@@ -98,7 +98,14 @@ def multiple_plot(data_array, title, stdev=False):
         hspace=0.005,
         #hspace=0,
         wspace=0)
-    plt.show()
+
+    fig = plt.gcf()
+    fig.set_size_inches((3840/100., 2160/100.))
+
+    if fname is None:
+        plt.show()
+    else:
+        fig.savefig(fname)
 
 
 def log_parser(base_path):
@@ -163,6 +170,10 @@ def main():
     parser.add_argument("--stdev",
                         action='store_true',
                         help="Plot standard deviation")
+    parser.add_argument("--save",
+                        nargs='?',
+                        type=argparse.FileType('wb'),
+                        help="Save figure to file instead of showing it")
 
     args = parser.parse_args()
     base_path = os.path.abspath(args.path[0])
@@ -176,7 +187,7 @@ def main():
         base_path = os.path.abspath(args.path[i])
         data_array.append(log_parser(base_path))
 
-    multiple_plot(data_array, args.t, args.stdev)
+    multiple_plot(data_array, args.t, args.save, args.stdev)
 
 
 if __name__ == '__main__':
