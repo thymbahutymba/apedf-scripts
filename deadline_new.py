@@ -7,6 +7,24 @@ import matplotlib
 import matplotlib.pyplot as plt
 import statistics
 import sys
+from enum import Enum
+
+
+class Policy(Enum):
+    gEDF = 0
+    apedf_ff = 1
+    apedf_wf = 2
+
+    @staticmethod
+    def from_str(policy_str):
+        if policy_str == 'gEDF':
+            return Policy.gEDF
+        elif policy_str == 'apedf-ff':
+            return Policy.apedf_ff
+        elif policy_str == 'apedf-wf':
+            return Policy.apedf_wf
+        else:
+            raise ValueError("policy " + policy_str + " not known.")
 
 
 def plot(data, title, stdev=False):
@@ -71,7 +89,8 @@ def multiple_plot(data_array, title, fname, stdev=False):
             if not stdev:
                 axs[j].plot(d[:, 0],
                             d[:, 1],
-                            marker=markers[i],
+                            marker=markers[Policy.from_str(k).value],
+                            color='C' + str(Policy.from_str(k).value),
                             linewidth=3,
                             label=k,
                             markersize=16)
@@ -79,7 +98,8 @@ def multiple_plot(data_array, title, fname, stdev=False):
                 axs[j].errorbar(d[:, 0] + (i - 1) * 0.01,
                                 d[:, 1],
                                 d[:, 2],
-                                marker=markers[i],
+                                marker=markers[Policy.from_str(k).value],
+                                color='C' + str(Policy.from_str(k).value),
                                 linestyle='None',
                                 elinewidth=2,
                                 label=k,
@@ -87,7 +107,9 @@ def multiple_plot(data_array, title, fname, stdev=False):
                                 capsize=7,
                                 capthick=3)
 
-        axs[j].legend(loc='upper left', fontsize=22)
+        handles, labels = np.array(axs[j].get_legend_handles_labels())
+        order = [Policy.from_str(l).value for l in labels]
+        axs[j].legend(handles[np.argsort(order)], labels[np.argsort(order)], loc='upper left', fontsize=22)
         axs[j].tick_params(axis='both', labelsize=20)
 
     plt.subplots_adjust(
@@ -100,7 +122,7 @@ def multiple_plot(data_array, title, fname, stdev=False):
         wspace=0)
 
     fig = plt.gcf()
-    fig.set_size_inches((3840/100., 2160/100.))
+    fig.set_size_inches((3840 / 100., 2160 / 100.))
 
     if fname is None:
         plt.show()
