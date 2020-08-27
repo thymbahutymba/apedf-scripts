@@ -82,6 +82,12 @@ def multiple_plot(data_array, title, fname, stdev=False):
 
         axs[j].set_xlabel("Utilization", fontsize=22)
         axs[j].set_ylabel("deadline miss ratio", fontsize=22)
+
+        ax = axs[j].twinx()
+        ax.set_ylabel("with invariance" if not j else "without invariance", fontsize=22, rotation=-90, labelpad=30)
+        ax.set_yticklabels([])
+        ax.set_yticks([])
+
         axs[j].set_yscale('log')
         axs[j].grid()
 
