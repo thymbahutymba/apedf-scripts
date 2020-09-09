@@ -27,51 +27,7 @@ class Policy(Enum):
             raise ValueError("policy " + policy_str + " not known.")
 
 
-def plot(data, title, stdev=False):
-    markers = ['o', '^', 's', 'd', 'X', 'h']
-
-    plt.title(title, fontsize=24)
-    plt.xlabel("Utilization", fontsize=22)
-    plt.ylabel("deadline miss ratio", fontsize=22)
-    plt.subplots_adjust(top=0.95,
-                        bottom=0.05,
-                        right=0.95,
-                        left=0.05,
-                        hspace=0,
-                        wspace=0)
-    matplotlib.rcParams.update({'font.size': 22})
-
-    plt.xticks(fontsize=20)
-    plt.yticks(fontsize=20)
-
-    plt.yscale('log')
-    plt.grid()
-
-    for i, (k, d) in enumerate(data.items()):
-        if not stdev:
-            plt.plot(d[:, 0],
-                     d[:, 1],
-                     marker=markers[i],
-                     linewidth=3,
-                     label=k,
-                     markersize=16)
-        else:
-            plt.errorbar(d[:, 0] + (i - 1) * 0.01,
-                         d[:, 1],
-                         d[:, 2],
-                         marker=markers[i],
-                         linestyle='None',
-                         elinewidth=2,
-                         label=k,
-                         markersize=12,
-                         capsize=7,
-                         capthick=3)
-
-    plt.legend(loc='upper left', fontsize=22)
-    plt.show()
-
-
-def multiple_plot(data_array, title, fname, stdev=False):
+def multiple_plot(data_array, title, fname, stdev=False, scatter=False):
     markers = ['o', '^', 's', 'd', 'X', 'h']
     fig, axs = plt.subplots(len(data_array), squeeze=False)
     axs = axs.flatten()
@@ -84,7 +40,10 @@ def multiple_plot(data_array, title, fname, stdev=False):
         axs[j].set_ylabel("deadline miss ratio", fontsize=22)
 
         ax = axs[j].twinx()
-        ax.set_ylabel("with invariance" if not j else "without invariance", fontsize=22, rotation=-90, labelpad=30)
+        ax.set_ylabel("with invariance" if not j else "without invariance",
+                      fontsize=22,
+                      rotation=-90,
+                      labelpad=30)
         ax.set_yticklabels([])
         ax.set_yticks([])
 
@@ -92,15 +51,7 @@ def multiple_plot(data_array, title, fname, stdev=False):
         axs[j].grid()
 
         for i, (k, d) in enumerate(data.items()):
-            if not stdev:
-                axs[j].plot(d[:, 0],
-                            d[:, 1],
-                            marker=markers[Policy.from_str(k).value],
-                            color='C' + str(Policy.from_str(k).value),
-                            linewidth=3,
-                            label=k,
-                            markersize=16)
-            else:
+            if stdev:
                 axs[j].errorbar(d[:, 0] + (i - 1) * 0.01,
                                 d[:, 1],
                                 d[:, 2],
@@ -112,10 +63,37 @@ def multiple_plot(data_array, title, fname, stdev=False):
                                 markersize=12,
                                 capsize=7,
                                 capthick=3)
+            elif scatter:
+                for ue, re in zip(d[:, 0], d[:, 3]):
+                    axs[j].scatter(
+                        [ue + (i - 1) * 0.02] * len(re),
+                        re,
+                        s=50,
+                        marker=markers[Policy.from_str(k).value],
+                        color='C' + str(Policy.from_str(k).value),
+                    )
+                axs[j].plot(d[:, 0] + (i - 1) * 0.02,
+                            d[:, 1],
+                            marker=markers[Policy.from_str(k).value],
+                            color='C' + str(Policy.from_str(k).value),
+                            linestyle='None',
+                            label=k,
+                            markersize=14)
+            else:
+                axs[j].plot(d[:, 0],
+                            d[:, 1],
+                            marker=markers[Policy.from_str(k).value],
+                            color='C' + str(Policy.from_str(k).value),
+                            linewidth=3,
+                            label=k,
+                            markersize=16)
 
         handles, labels = np.array(axs[j].get_legend_handles_labels())
         order = [Policy.from_str(l).value for l in labels]
-        axs[j].legend(handles[np.argsort(order)], labels[np.argsort(order)], loc='upper left', fontsize=22)
+        axs[j].legend(handles[np.argsort(order)],
+                      labels[np.argsort(order)],
+                      loc='upper left',
+                      fontsize=22)
         axs[j].tick_params(axis='both', labelsize=20)
 
     plt.subplots_adjust(
@@ -144,7 +122,7 @@ def log_parser(base_path):
         if not os.path.isdir(os.path.join(base_path, policy)):
             continue
 
-        data_mat = np.empty([0, 3])
+        data_mat = np.empty([0, 4])
 
         for util in os.listdir(os.path.join(base_path, policy)):
             missed_deadline = 0
@@ -173,13 +151,12 @@ def log_parser(base_path):
 
                 missed_deadline += md
                 total_row += tr
-
             data_mat = np.vstack([
                 data_mat,
                 [
                     float(util[:-1]),
                     statistics.mean(ratio),
-                    statistics.stdev(ratio)
+                    statistics.stdev(ratio), ratio
                 ]
             ])
 
@@ -195,13 +172,18 @@ def main():
                         type=str,
                         required=True,
                         help="Title of the plot")
-    parser.add_argument("--stdev",
-                        action='store_true',
-                        help="Plot standard deviation")
     parser.add_argument("--save",
                         nargs='?',
                         type=argparse.FileType('wb'),
                         help="Save figure to file instead of showing it")
+
+    command_group = parser.add_mutually_exclusive_group()
+    command_group.add_argument("--stdev",
+                               action='store_true',
+                               help="Standard deviation of all the run")
+    command_group.add_argument("--scatter",
+                               action='store_true',
+                               help="Scatter plot of deadline miss ration")
 
     args = parser.parse_args()
     base_path = os.path.abspath(args.path[0])
@@ -215,7 +197,7 @@ def main():
         base_path = os.path.abspath(args.path[i])
         data_array.append(log_parser(base_path))
 
-    multiple_plot(data_array, args.t, args.save, args.stdev)
+    multiple_plot(data_array, args.t, args.save, args.stdev, args.scatter)
 
 
 if __name__ == '__main__':
