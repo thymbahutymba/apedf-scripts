@@ -7,6 +7,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import statistics
 import sys
+from matplotlib.lines import Line2D
 from enum import Enum
 
 
@@ -14,6 +15,8 @@ class Policy(Enum):
     gEDF = 0
     apedf_ff = 1
     apedf_wf = 2
+    a2pedf_ff = 3
+    a2pedf_wf = 4
 
     @staticmethod
     def from_str(policy_str):
@@ -23,6 +26,10 @@ class Policy(Enum):
             return Policy.apedf_ff
         elif policy_str == 'apedf-wf':
             return Policy.apedf_wf
+        elif policy_str == 'a2pedf-ff':
+            return Policy.a2pedf_ff
+        elif policy_str == 'a2pedf-wf':
+            return Policy.a2pedf_wf
         else:
             raise ValueError("policy " + policy_str + " not known.")
 
@@ -87,13 +94,35 @@ def multiple_plot(data_array, title, fname, stdev=False, scatter=False):
                             linewidth=3,
                             label=k,
                             markersize=16)
+                axs[j].plot(d[d[:, 4] != 0, 0],
+                            d[d[:, 4] != 0, 4],
+                            marker=markers[Policy.from_str(k).value],
+                            color='C' + str(Policy.from_str(k).value),
+                            linewidth=3,
+                            linestyle='dashed',
+                            markersize=16)
 
-        handles, labels = np.array(axs[j].get_legend_handles_labels())
+        handles, labels = np.array(axs[j].get_legend_handles_labels(),
+                                   dtype=object)
         order = [Policy.from_str(l).value for l in labels]
-        axs[j].legend(handles[np.argsort(order)],
-                      labels[np.argsort(order)],
-                      loc='upper left',
-                      fontsize=22)
+
+        median = Line2D([], [],
+                        color="black",
+                        linewidth=3,
+                        linestyle="--",
+                        label='median')
+
+        if not scatter and not stdev:
+            axs[j].legend(np.append(handles[np.argsort(order)], median),
+                          np.append(labels[np.argsort(order)], "median"),
+                          loc='upper left',
+                          fontsize=22)
+        else:
+            axs[j].legend(handles[np.argsort(order)],
+                          labels[np.argsort(order)],
+                          loc='upper left',
+                          fontsize=22)
+
         axs[j].tick_params(axis='both', labelsize=20)
 
     plt.subplots_adjust(
@@ -122,7 +151,7 @@ def log_parser(base_path):
         if not os.path.isdir(os.path.join(base_path, policy)):
             continue
 
-        data_mat = np.empty([0, 4])
+        data_mat = np.empty([0, 5], dtype=object)
 
         for util in os.listdir(os.path.join(base_path, policy)):
             missed_deadline = 0
@@ -153,11 +182,14 @@ def log_parser(base_path):
                 total_row += tr
             data_mat = np.vstack([
                 data_mat,
-                [
+                np.array([
                     float(util[:-1]),
                     statistics.mean(ratio),
-                    statistics.stdev(ratio), ratio
-                ]
+                    statistics.stdev(ratio),
+                    ratio,
+                    statistics.median(ratio),
+                ],
+                dtype=object)
             ])
 
         data[policy] = data_mat[np.argsort(data_mat[:, 0])]

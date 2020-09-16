@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 
 mkdir /dev/cpuset
 mount -t cgroup -o cpuset cpuset /dev/cpuset
