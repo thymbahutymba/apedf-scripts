@@ -1,0 +1,91 @@
+#!/bin/bash
+
+function usage {
+	cat << EOF
+./$0 -c cpus -e experiment_number
+./$0 -t tasks -e experiment_number
+
+Usage:
+  -h              display usage
+  -c cpus         number of cpus for the test 2, 4 or 8
+  -u utilization  utilization of the taskset, required only with -c
+  -t tasks        number of task of the experiment
+  -e test_number  test number from which the json files are taken
+		  (i.e. the directory inside taskgen-rs/json/X_test/)
+
+N.B:
+  The directory that X_test can contain are either Mcpus or Ntasks 
+EOF
+}
+
+
+while getopts "t:c:e:u:h" arg; do
+	case "${arg}" in
+		e) EXPERIMENT=${OPTARG}
+			;;
+		c) [ "${TASKS}" ] && echo "Cannot specify both -c and -t options" && exit 1;
+			CPUS=${OPTARG}
+			;;
+		t) [ "${CPUS}" ] && echo "Cannot specify both -c and -t options" && exit 1;
+			TASKS=${OPTARG}
+			;;
+		u) U=${OPTARG}
+			;;
+		:) echo "Error: -${OPTARG} requires an argument." && exit 1;;
+		*) echo "Error: unrecognized argument -${OPTARG}." && usage && exit 1;;
+	esac
+done
+
+if [ -z "${EXPERIMENT}" ]; then
+	echo "Error: -e option must be used for fetch the json file."
+	exit 1
+fi
+
+if [[ -z "${CPUS}" && -z "${TASKS}" ]]; then
+	echo "Error: either -c or -t option must be specified"
+	exit 1
+fi
+
+if [[ "${CPUS}" && -z "${U}" ]]; then
+	echo "Error: -u must be specified with -c option"
+	exit 1
+fi
+
+if [[ "${CPUS}" && ! -d "taskgen-rs/json/${EXPERIMENT}_test/${CPUS}cpus/" ]]; then
+	echo "Error: taskgen-rs/json/${EXPERIMENT}_test/${CPUS}cpus/ not found."
+	exit 1
+elif [[ "${TASKS}" && ! -d "taskgen-rs/json/${EXPERIMENT}_test/${TASKS}tasks/" ]]; then
+	echo "Error: taskgen-rs/json/${EXPERIMENT}_test/${TASKS}tasks/ not found."
+	exit 1
+fi
+
+policy=$(cat /proc/sys/kernel/sched_dl_policy)
+pull=$(cat /proc/sys/kernel/sched_dl_xf_pull)
+
+case $policy in 
+	1) [ ${pull} = 0 ] && policy_str='apedf-ff' || policy_str='a2pedf-ff'
+		;;
+	*) policy_str='gEDF'
+		;; 
+esac
+
+echo $policy_str
+
+if [ "${CPUS}" ]; then
+	mkdir -p rt-app-log/${EXPERIMENT}_test/${CPUS}cpus/${policy_str}/${U}u
+
+	for f in taskgen-rs/json/${EXPERIMENT}_test/${CPUS}cpus/Config*_${U}u.json; do
+
+		mkdir rt-app-log/${U}u
+		./rt-app/src/rt-app ${f}
+		mv rt-app-log/${U}u rt-app-log/${EXPERIMENT}_test/${CPUS}cpus/${policy_str}/${U}u/`echo ${f##*/} | sed 's/_.*//'`
+	done
+elif [ "${TASKS}" ]; then
+	mkdir -p rt-app-log/${EXPERIMENT}_test/${TASKS}tasks/${policy_str}/${TASKS}t
+
+	for f in taskgen-rs/json/${EXPERIMENT}_test/${TASKS}tasks/Config*; do
+		mkdir rt-app-log/${TASKS}t
+		./rt-app/src/rt-app ${f}
+		mv rt-app-log/${TASKS}t rt-app-log/${EXPERIMENT}_test/${TASKS}tasks/${policy_str}/${TASKS}t/`echo ${f##*/} | sed 's/_.*//'`
+	done
+fi
