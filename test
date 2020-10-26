@@ -61,17 +61,17 @@ for policy in $(seq 0 2); do
 	echo $policy_str
 	for i in $U; do 
 		mkdir -p rt-app-log/${test_number}_test/${H}H/${cpus}cpus/${policy_str}/${i}u
+		
+		echo -n "${policy_str} ${i} $(cat /proc/sched_dl_pulls) " >> /home/astevanato/pull_logs/"${cpus}_cpus_${test_number}_test"
 
 		for f in taskgen-rs/json/${test_number}_test/${H}H/${cpus}cpus/Config*_${i}u.json; do
-			if ps aux | grep -v grep | grep rt-app; then
-				echo "rt-app error!!!!!!!"
-				exit 1
-			fi
 
 			mkdir rt-app-log/${i}u
 			./rt-app/src/rt-app ${f}
 			mv rt-app-log/${i}u rt-app-log/${test_number}_test/${H}H/${cpus}cpus/${policy_str}/${i}u/`echo ${f##*/} | sed 's/_.*//'`
 		done
+
+		echo "$(cat /proc/sched_dl_pulls)" >> /home/astevanato/pull_logs/"${cpus}_cpus_${test_number}_test"
 
 		sleep 1
 	done

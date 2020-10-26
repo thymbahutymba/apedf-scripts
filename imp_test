@@ -81,11 +81,11 @@ if [ "${CPUS}" ]; then
 		mv rt-app-log/${U}u rt-app-log/${EXPERIMENT}_test/${CPUS}cpus/${policy_str}/${U}u/`echo ${f##*/} | sed 's/_.*//'`
 	done
 elif [ "${TASKS}" ]; then
-	mkdir -p rt-app-log/${EXPERIMENT}_test/${TASKS}tasks/${policy_str}/${TASKS}t
+	mkdir -p rt-app-log/${EXPERIMENT}_test/${policy_str}/${TASKS}t
 
-	for f in taskgen-rs/json/${EXPERIMENT}_test/${TASKS}tasks/Config*; do
+	for f in taskgen-rs/json/${EXPERIMENT}_test/Config*; do
 		mkdir rt-app-log/${TASKS}t
 		./rt-app/src/rt-app ${f}
-		mv rt-app-log/${TASKS}t rt-app-log/${EXPERIMENT}_test/${TASKS}tasks/${policy_str}/${TASKS}t/`echo ${f##*/} | sed 's/_.*//'`
+		mv rt-app-log/${TASKS}t rt-app-log/${EXPERIMENT}_test/${policy_str}/${TASKS}t/`echo ${f##*/} | sed 's/_.*//'`
 	done
 fi

@@ -8,52 +8,41 @@ import matplotlib.pyplot as plt
 import statistics
 import sys
 from matplotlib.lines import Line2D
-from enum import Enum
+from policy import Policy
 
 
-class Policy(Enum):
-    gEDF = 0
-    apedf_ff = 1
-    apedf_wf = 2
-    a2pedf_ff = 3
-    a2pedf_wf = 4
-
-    @staticmethod
-    def from_str(policy_str):
-        if policy_str == 'gEDF':
-            return Policy.gEDF
-        elif policy_str == 'apedf-ff':
-            return Policy.apedf_ff
-        elif policy_str == 'apedf-wf':
-            return Policy.apedf_wf
-        elif policy_str == 'a2pedf-ff':
-            return Policy.a2pedf_ff
-        elif policy_str == 'a2pedf-wf':
-            return Policy.a2pedf_wf
-        else:
-            raise ValueError("policy " + policy_str + " not known.")
+big_font = 24
+small_font = 20
 
 
 def multiple_plot(data_array, title, fname, stdev=False, scatter=False):
-    markers = ['o', '^', 's', 'd', 'X', 'h']
+    markers = ['o', '^', 's', 'd', 'X', 'h', 'v', '*']
     fig, axs = plt.subplots(len(data_array), squeeze=False)
     axs = axs.flatten()
-    matplotlib.rcParams.update({'font.size': 22})
+    matplotlib.rcParams.update({'font.size': big_font})
 
     for j, data in enumerate(data_array):
-        fig.suptitle(title, fontsize=24)
+        fig.suptitle(title, fontsize=big_font)
 
-        axs[j].set_xlabel("Utilization", fontsize=22)
-        axs[j].set_ylabel("deadline miss ratio", fontsize=22)
+        axs[j].set_xlabel("Utilization", fontsize=small_font)
+        axs[j].set_ylabel("deadline miss ratio", fontsize=small_font)
 
-        ax = axs[j].twinx()
-        ax.set_ylabel("with invariance" if not j else "without invariance",
-                      fontsize=22,
-                      rotation=-90,
-                      labelpad=30)
-        ax.set_yticklabels([])
-        ax.set_yticks([])
-
+#        ax = axs[j].twinx()
+#        ax.set_ylabel("with invariance" if not j else "without invariance",
+#                      fontsize=small_font,
+#                      rotation=-90,
+#                      labelpad=30)
+#
+#        ax.set_yticklabels([])
+#        ax.set_yticks([])
+        axs[j].set_xticks(
+            np.arange(
+                min(np.array(list(data.values())[0])[:, 0]), 
+                max(np.array(list(data.values())[0])[:, 0]) + 0.1,
+                0.1
+            )
+        )
+        
         axs[j].set_yscale('log')
         axs[j].grid()
 
@@ -75,7 +64,7 @@ def multiple_plot(data_array, title, fname, stdev=False, scatter=False):
                     axs[j].scatter(
                         [ue + (i - 1) * 0.02] * len(re),
                         re,
-                        s=50,
+                        s=40,
                         marker=markers[Policy.from_str(k).value],
                         color='C' + str(Policy.from_str(k).value),
                     )
@@ -84,23 +73,23 @@ def multiple_plot(data_array, title, fname, stdev=False, scatter=False):
                             marker=markers[Policy.from_str(k).value],
                             color='C' + str(Policy.from_str(k).value),
                             linestyle='None',
-                            label=k,
-                            markersize=14)
+                            label=k.replace("a2p", "a$^2$p").replace("edf", "EDF").replace("wf", "WF").replace("ff", "FF"),
+                            markersize=12)
             else:
                 axs[j].plot(d[:, 0],
                             d[:, 1],
                             marker=markers[Policy.from_str(k).value],
                             color='C' + str(Policy.from_str(k).value),
-                            linewidth=3,
-                            label=k,
-                            markersize=16)
+                            linewidth=1.5,
+                            label=k.replace("a2p", "a$^2$p").replace("edf", "EDF").replace("wf", "WF").replace("ff", "FF"),
+                            markersize=12)
                 axs[j].plot(d[d[:, 4] != 0, 0],
                             d[d[:, 4] != 0, 4],
                             marker=markers[Policy.from_str(k).value],
                             color='C' + str(Policy.from_str(k).value),
-                            linewidth=3,
+                            linewidth=1.5,
                             linestyle='dashed',
-                            markersize=16)
+                            markersize=12)
 
         handles, labels = np.array(axs[j].get_legend_handles_labels(),
                                    dtype=object)
@@ -108,7 +97,7 @@ def multiple_plot(data_array, title, fname, stdev=False, scatter=False):
 
         median = Line2D([], [],
                         color="black",
-                        linewidth=3,
+                        linewidth=1.5,
                         linestyle="--",
                         label='median')
 
@@ -116,26 +105,43 @@ def multiple_plot(data_array, title, fname, stdev=False, scatter=False):
             axs[j].legend(np.append(handles[np.argsort(order)], median),
                           np.append(labels[np.argsort(order)], "median"),
                           loc='upper left',
-                          fontsize=22)
+                          fontsize=small_font)
         else:
             axs[j].legend(handles[np.argsort(order)],
                           labels[np.argsort(order)],
                           loc='upper left',
-                          fontsize=22)
+                          fontsize=small_font)
 
         axs[j].tick_params(axis='both', labelsize=20)
 
+    #plt.subplots_adjust(
+    #    top=0.95,
+    #    bottom=0.05,
+    #    right=0.95,
+    #    left=0.05,
+    #    hspace=0.005,
+    #    wspace=0)
     plt.subplots_adjust(
-        top=0.95,
-        bottom=0.05,
-        right=0.95,
-        left=0.05,
+        top=0.94,
+        bottom=0.08,
+        right=0.97,
+        left=0.07,
         hspace=0.005,
-        #hspace=0,
         wspace=0)
+    #plt.subplots_adjust(
+    #    top=0.94,
+    #    bottom=0.07,
+    #    right=0.96,
+    #    left=0.08,
+    #    hspace=0.005,
+    #    wspace=0)
 
     fig = plt.gcf()
-    fig.set_size_inches((3840 / 100., 2160 / 100.))
+    #fig.set_size_inches((3840 / 100., 2160 / 100.))
+    #fig.set_size_inches((1920 / 100., 1080 / 100.))
+    #fig.set_size_inches((1500 / 100., 1200 / 100.))
+    fig.set_size_inches((1900 / 100., 850 / 100.))
+
 
     if fname is None:
         plt.show()
@@ -167,7 +173,7 @@ def log_parser(base_path):
                     with open(
                             os.path.join(base_path, policy, util, conf, file),
                             'r') as f:
-                        lines = f.readlines()[1:]
+                        lines = f.readlines()[1:-1]
 
                     md += sum(
                         [list(map(int, l.split()))[7] < 0 for l in lines])
@@ -180,17 +186,19 @@ def log_parser(base_path):
 
                 missed_deadline += md
                 total_row += tr
-            data_mat = np.vstack([
-                data_mat,
-                np.array([
-                    float(util[:-1]),
-                    statistics.mean(ratio),
-                    statistics.stdev(ratio),
-                    ratio,
-                    statistics.median(ratio),
-                ],
-                dtype=object)
-            ])
+
+            if any(ratio):
+                data_mat = np.vstack([
+                    data_mat,
+                    np.array([
+                        float(util[:-1]),
+                        statistics.mean(ratio),
+                        statistics.stdev(ratio),
+                        ratio,
+                        statistics.median(ratio),
+                    ],
+                    dtype=object)
+                ])
 
         data[policy] = data_mat[np.argsort(data_mat[:, 0])]
 
