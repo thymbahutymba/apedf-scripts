@@ -28,8 +28,20 @@ def multiple_plot(data_array, title, fname):
 
         axs[j].set_xlabel("Utilization", fontsize=small_font)
         axs[j].grid()
+        
+        v = np.array(list(data.values())[0])[:, 0]
+        s = int(np.diff(v)[0] * 10) / 10
+        axs[j].set_xticks(
+            np.arange(
+                min(v), 
+                max(v) + s,
+                s
+            )
+        )
 
         for (k, d) in data.items():
+            k = k.replace("a2p", "a$^2$p").replace("edf", "EDF").replace("wf", "WF").replace("ff", "FF")
+
             axs[j].plot(d[:, 0],
                         d[:, 1],
                         marker=markers[Policy.from_str(k).value],
@@ -63,7 +75,7 @@ def multiple_plot(data_array, title, fname):
     if fname is None:
         plt.show()
     else:
-        fig.savefig(fname)
+        fig.savefig(fname, format='eps')
 
 
 def log_parser(base_path):

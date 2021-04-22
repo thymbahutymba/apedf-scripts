@@ -24,7 +24,7 @@ def multiple_plot(data_array, title, fname, stdev=False, scatter=False):
     for j, data in enumerate(data_array):
         fig.suptitle(title, fontsize=big_font)
 
-        axs[j].set_xlabel("Utilization", fontsize=small_font)
+        axs[j].set_xlabel("Tasks", fontsize=small_font)
         axs[j].set_ylabel("deadline miss ratio", fontsize=small_font)
 
 #        ax = axs[j].twinx()
@@ -42,11 +42,17 @@ def multiple_plot(data_array, title, fname, stdev=False, scatter=False):
                 0.1
             )
         )
-        
+
+        v = (list(data.values())[0])[:, 0]
+        s = int(np.diff(v)[0] * 10) / 10
+        #axs[j].set_xticks(np.arange(2.4, 3.9, 0.1))
+        axs[j].set_xticks(np.arange(min(v), max(v) + s, s))
         axs[j].set_yscale('log')
         axs[j].grid()
 
         for i, (k, d) in enumerate(data.items()):
+            k = k.replace("a2p", "a$^2$p").replace("edf", "EDF").replace("wf", "WF").replace("ff", "FF")
+
             if stdev:
                 axs[j].errorbar(d[:, 0] + (i - 1) * 0.01,
                                 d[:, 1],
@@ -76,37 +82,65 @@ def multiple_plot(data_array, title, fname, stdev=False, scatter=False):
                             label=k.replace("a2p", "a$^2$p").replace("edf", "EDF").replace("wf", "WF").replace("ff", "FF"),
                             markersize=12)
             else:
-                axs[j].plot(d[:, 0],
-                            d[:, 1],
+                for i in range(len(d[:, 0])):
+                    if not d[i, 1]:
+                        continue
+
+                    axs[j].plot(d[i, 0],
+                        d[i, 1],
+                        marker=markers[Policy.from_str(k).value],
+                        color='C' + str(Policy.from_str(k).value),
+                        linewidth=1.5,
+                        #label=k.replace("a2p", "a$^2$p").replace("edf", "EDF").replace("wf", "WF").replace("ff", "FF"),
+                        label=k,
+                        markersize=12)
+                    
+                    if i + 1 < len(d[:, 0]) and d[i+1, 1]:
+                        axs[j].plot(d[i:i+2, 0],
+                            d[i:i+2, 1],
                             marker=markers[Policy.from_str(k).value],
                             color='C' + str(Policy.from_str(k).value),
                             linewidth=1.5,
-                            label=k.replace("a2p", "a$^2$p").replace("edf", "EDF").replace("wf", "WF").replace("ff", "FF"),
+                            #label=k.replace("a2p", "a$^2$p").replace("edf", "EDF").replace("wf", "WF").replace("ff", "FF"),
+                            label=k,
                             markersize=12)
-                axs[j].plot(d[d[:, 4] != 0, 0],
+                    
+                #axs[j].plot(d[:, 0],
+                #            d[:, 1],
+                #            marker=markers[Policy.from_str(k).value],
+                #            color='C' + str(Policy.from_str(k).value),
+                #            linewidth=1.5,
+                #            #label=k.replace("a2p", "a$^2$p").replace("edf", "EDF").replace("wf", "WF").replace("ff", "FF"),
+                #            label=k,
+                #            markersize=12)
+                """axs[j].plot(d[d[:, 4] != 0, 0],
                             d[d[:, 4] != 0, 4],
                             marker=markers[Policy.from_str(k).value],
                             color='C' + str(Policy.from_str(k).value),
                             linewidth=1.5,
+                            label=k,
                             linestyle='dashed',
                             markersize=12)
-
+                """
         handles, labels = np.array(axs[j].get_legend_handles_labels(),
                                    dtype=object)
+        _, indexes = np.unique(labels, return_index=True)
+        handles = handles[indexes]
+        labels = labels[indexes]
         order = [Policy.from_str(l).value for l in labels]
 
-        median = Line2D([], [],
-                        color="black",
-                        linewidth=1.5,
-                        linestyle="--",
-                        label='median')
+        #median = Line2D([], [],
+        #                color="black",
+        #                linewidth=1.5,
+        #                linestyle="--",
+        #                label='median')
 
         if not scatter and not stdev:
-            axs[j].legend(np.append(handles[np.argsort(order)], median),
-                          np.append(labels[np.argsort(order)], "median"),
-                          loc='upper left',
-                          fontsize=small_font)
-        else:
+            #axs[j].legend(np.append(handles[np.argsort(order)], median),
+            #              np.append(labels[np.argsort(order)], "median"),
+            #              loc='upper left',
+            #              fontsize=small_font)
+        #else:
             axs[j].legend(handles[np.argsort(order)],
                           labels[np.argsort(order)],
                           loc='upper left',
@@ -146,7 +180,7 @@ def multiple_plot(data_array, title, fname, stdev=False, scatter=False):
     if fname is None:
         plt.show()
     else:
-        fig.savefig(fname)
+        fig.savefig(fname, format='eps')
 
 
 def log_parser(base_path):
@@ -187,18 +221,18 @@ def log_parser(base_path):
                 missed_deadline += md
                 total_row += tr
 
-            if any(ratio):
-                data_mat = np.vstack([
-                    data_mat,
-                    np.array([
-                        float(util[:-1]),
-                        statistics.mean(ratio),
-                        statistics.stdev(ratio),
-                        ratio,
-                        statistics.median(ratio),
-                    ],
-                    dtype=object)
-                ])
+            #if any(ratio):
+            data_mat = np.vstack([
+                data_mat,
+                np.array([
+                    float(util[:-1]),
+                    statistics.mean(ratio),
+                    statistics.stdev(ratio),
+                    ratio,
+                    statistics.median(ratio),
+                ],
+                dtype=object)
+            ])
 
         data[policy] = data_mat[np.argsort(data_mat[:, 0])]
 
